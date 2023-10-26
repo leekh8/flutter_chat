@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat/services/auth_service.dart';
 import 'chat_screen.dart';
 
-class AuthScreen extends StatelessWidget {
-  final AuthService _authService = AuthService();
+class SignUpScreen extends StatefulWidget {
+  @override
+  _SignUpScreenState createState() => _SignUpScreenState();
+}
 
-  void _signln(BuildContext context, String email, String password) async {
-    // 인증 서비스 호출해 사용자 인증
-    // 인증 성공하면 Navigator 사용해 ChatScreen으로 이동
-    final user = await _authService.signInWithEmail(email, password);
+class _SignUpScreenState extends State<SignUpScreen> {
+  final AuthService _authService = AuthService();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  void _signUp(BuildContext context) async {
+    final email = _emailController.text;
+    final password = _passwordController.text;
+    final user = await _authService.signUpWithEmail(email, password);
 
     if (user != null) {
       Navigator.pushReplacement(
@@ -22,26 +29,24 @@ class AuthScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text('Sign In'),
+          title: Text('Sign Up'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
               TextField(
+                controller: _emailController,
                 decoration: InputDecoration(labelText: 'Email'),
-                onChanged: (value) {},
               ),
               TextField(
+                controller: _passwordController,
                 decoration: InputDecoration(labelText: 'Password'),
                 obscureText: true,
-                onChanged: (value) {},
               ),
               ElevatedButton(
-                onPressed: () {
-                  _signln(context, 'email@example.com', 'password123');
-                },
-                child: Text('Sigin In'),
+                onPressed: () => _signUp(context),
+                child: Text('Sigin Up'),
               ),
             ],
           ),

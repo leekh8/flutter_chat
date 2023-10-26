@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firebase cloud Firestore 사용
 
+
+
 class ChatService {
   final CollectionReference chatCollection =
       FirebaseFirestore.instance.collection('chats');

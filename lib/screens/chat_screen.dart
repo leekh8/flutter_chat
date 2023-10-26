@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_chat/services/auth_service.dart';
+import 'signIn_screen.dart';
 
 class ChatScreen extends StatelessWidget {
+  final AuthService _authService = AuthService();
+
+  void _signOut(BuildContext context) async {
+    await _authService.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => AuthScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Chat'),
+        actions: [
+          IconButton(
+              icon: Icon(Icons.logout),
+              onPressed: () => _signOut(context),
+              ),
+        ],
+      ),
       body: StreamBuilder(
         stream: FirebaseFirestore.instance
             .collection('chats')
