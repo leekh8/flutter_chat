@@ -1,65 +1,74 @@
-![header](https://capsule-render.vercel.app/api?type=waving&color=auto&height=100&section=header&fontSize=90)
+# flutter_chat — Real-Time Chat App
 
-# FlutterChat: Real-Time Chat Application :speech_balloon:
+> A minimal real-time chat application built with Flutter and Firebase: email/password auth plus a shared, live-updating message feed backed by Cloud Firestore.
 
-FlutterChat is a real-time chat application made with Flutter, enabling users to communicate
-instantly across various channels. Whether for personal conversations, team discussions, or
-community forums, FlutterChat provides a user-friendly and seamless messaging experience.
+## Why
 
-## 🎯 Project Goals
+Built as a hands-on exercise to learn the core Flutter + Firebase stack end to end: wiring up Firebase Authentication, persisting data in Cloud Firestore, and rendering a live message stream with `StreamBuilder`. The goal was a working slice of a chat product (auth → send → real-time read), not a fully featured messenger.
 
-- Deliver real-time messaging functionality with a user-friendly interface.
-- Implement authentication to ensure secure user access.
-- Provide real-time updates and notifications to keep users engaged.
-- Ensure compatibility across devices, including mobile responsiveness.
+## Status
 
----
+⚫ Dormant — last commit `2023-10-26`. Functional core, but unfinished UI widgets remain (see Roadmap).
 
-### 🚀 Tech Stack
+## Features
 
-- **FrontEnd**:
-    - Frameworks: Flutter, Dart
-    - Styling: Flutter's built-in styling options
-- **BackEnd**:
-    - Server: Firebase Realtime Database
-    - Authentication: Firebase Authentication
-- **DataBase**:
-    - Database: Firebase Firestore
-    - Real-Time Updates: Firebase Realtime Database
-- **Deployment**:
-    - Cloud: Firebase Hosting
-    - Version Management: Git
-    - Testing: Unit and Widget Tests with Flutter Testing Framework
+Confirmed in source:
 
----
+- **Email/password authentication** — sign up, sign in, and sign out via Firebase Auth (`auth_service.dart`).
+- **Send messages** — writes `{ message, sender, timestamp }` documents to the Firestore `chats` collection (`chat_service.dart`).
+- **Real-time message feed** — `ChatScreen` subscribes to the `chats` collection with a Firestore snapshot stream, ordered by server timestamp (newest first), so new messages appear live.
+- **Navigation flow** — sign-in screen → sign-up screen → chat screen, with logout returning to sign-in.
+- **Message model** — `Message.fromDocument` factory maps Firestore documents to typed objects, with required-field validation.
 
-### 🖌️ Features & Functionality
+Not implemented (despite earlier claims): channels/topics, media/image sharing, push notifications, and Google/OAuth sign-in. The `MessageBubble` and `MessageInput` widget files exist but are empty stubs. There is currently no in-app UI to compose/send a message — `ChatService.sendMessage` and the message model are not yet wired into a screen.
 
-- **User Experience**:
-    - Real-Time Messaging: Instant messaging across different channels.
-    - Notifications: Real-time notifications for new messages.
-- **Authentication**:
-    - Secure Sign-In: Email and password or OAuth with Google Sign-In.
-- **Message Management**:
-    - Channels: Create and join various channels for different topics.
-    - Media Sharing: Share images, videos, and files within conversations.
-- **Optimization**:
-    - Mobile Responsiveness: Adaptive design for both Android and iOS devices.
-    - Performance: Optimized for low latency and fast message delivery.
+## Stack
 
----
+- **Flutter / Dart** — Dart SDK `>=3.1.4 <4.0.0`, Material 3 theming.
+- **State management** — none beyond `StatefulWidget` + `StreamBuilder` (no external state library).
+- **Backend** — Firebase:
+  - `firebase_core` ^2.20.0
+  - `firebase_auth` ^4.12.0 (authentication)
+  - `cloud_firestore` ^4.12.0 (message storage + real-time stream)
+- **Lint** — `flutter_lints` ^2.0.0
+- Cross-platform scaffolding present for Android, iOS, web, macOS, Linux, and Windows.
 
-## Getting Started
+## Structure
 
-This project is a starting point for a Flutter application.
+```
+lib/
+├── main.dart                 # App entry; initializes Firebase, sets AuthScreen as home
+├── firebase_options.dart     # FlutterFire-generated platform config
+├── models/
+│   └── message.dart          # Message model + fromDocument factory
+├── screens/
+│   ├── signIn_screen.dart    # Email/password sign-in (AuthScreen)
+│   ├── signUp_screen.dart    # Account registration
+│   └── chat_screen.dart      # Live Firestore message stream + logout
+├── services/
+│   ├── auth_service.dart     # Firebase Auth wrapper (sign up/in/out)
+│   └── chat_service.dart     # Firestore message writes
+└── widgets/
+    ├── message_bubble.dart   # (empty stub)
+    └── message_input.dart    # (empty stub)
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Run
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**Firebase setup required.** The app calls `Firebase.initializeApp()` and talks to a live Firestore/Auth backend, so you need your own Firebase project:
 
-![footer](https://capsule-render.vercel.app/api?type=waving&color=auto&height=150&section=footer&fontSize=90)
+1. Create a Firebase project; enable Email/Password authentication and Cloud Firestore.
+2. Run `flutterfire configure` to regenerate `lib/firebase_options.dart` for your project (note: `main.dart` currently calls `Firebase.initializeApp()` without passing `DefaultFirebaseOptions.currentPlatform` — pass it, or rely on the native platform config files).
+3. Add a Firestore security rule set appropriate for your use case before any real deployment.
+
+## Roadmap
+
+- [ ] Build the message composer UI (fill in `MessageInput`) and wire `ChatService.sendMessage` into `ChatScreen`.
+- [ ] Implement `MessageBubble` with sender alignment/styling and use the `Message` model in the feed.
+- [ ] Add input validation and user-facing error handling for auth failures (currently failures are silently swallowed).
+- [ ] Persist/display a friendly user identity instead of raw UID, and add per-user message styling.
