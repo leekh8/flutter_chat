@@ -152,3 +152,8 @@ lib/generated_plugin_registrant.dart
 
 # End of https://www.toptal.com/developers/gitignore/api/flutter,dart,firebase!
 !/ios/Runner/GoogleService-Info.plist
+
+# firebase config (regenerate locally with: flutterfire configure)
+lib/firebase_options.dart
+**/google-services.json
+**/firebase_app_id_file.json
