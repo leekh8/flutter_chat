@@ -4,8 +4,10 @@ import 'signUp_screen.dart';
 import 'chat_screen.dart';
 
 class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
+
   @override
-  _AuthScreenState createState() => _AuthScreenState();
+  State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
@@ -13,17 +15,22 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void _signIn(BuildContext context) async {
+  void _signIn() async {
     final email = _emailController.text;
     final password = _passwordController.text;
     final user = await _authService.signInWithEmail(email, password);
 
+    if (!mounted) return;
     if (user != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => ChatScreen()),
+        MaterialPageRoute(builder: (context) => const ChatScreen()),
       );
-    } else {}
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인 실패: 이메일 또는 비밀번호를 확인하세요')),
+      );
+    }
   }
 
   @override
@@ -46,14 +53,14 @@ class _AuthScreenState extends State<AuthScreen> {
                 obscureText: true,
               ),
               ElevatedButton(
-                onPressed: () => _signIn(context),
-                child: Text('Sigin In'),
+                onPressed: _signIn,
+                child: const Text('Sign In'),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SignUpScreen()),
+                    MaterialPageRoute(builder: (context) => const SignUpScreen()),
                   );
                 },
                 child: Text('Sign Up'),

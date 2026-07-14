@@ -3,8 +3,10 @@ import 'package:flutter_chat/services/auth_service.dart';
 import 'chat_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
+
   @override
-  _SignUpScreenState createState() => _SignUpScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
@@ -12,17 +14,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void _signUp(BuildContext context) async {
+  void _signUp() async {
     final email = _emailController.text;
     final password = _passwordController.text;
     final user = await _authService.signUpWithEmail(email, password);
 
+    if (!mounted) return;
     if (user != null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => ChatScreen()),
+        MaterialPageRoute(builder: (context) => const ChatScreen()),
       );
-    } else {}
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('회원가입 실패: 이메일 형식·비밀번호(6자 이상)를 확인하세요')),
+      );
+    }
   }
 
   @override
@@ -45,8 +52,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 obscureText: true,
               ),
               ElevatedButton(
-                onPressed: () => _signUp(context),
-                child: Text('Sigin Up'),
+                onPressed: _signUp,
+                child: const Text('Sign Up'),
               ),
             ],
           ),
