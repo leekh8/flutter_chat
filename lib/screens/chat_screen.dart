@@ -16,20 +16,37 @@ class _ChatScreenState extends State<ChatScreen> {
   final AuthService _authService = AuthService();
   final ChatService _chatService = ChatService();
   final TextEditingController _controller = TextEditingController();
+  // 엔터로 보낸 뒤에도 입력창에 커서가 남아 연속 입력이 가능하도록 포커스를 직접 관리한다.
+  final FocusNode _inputFocus = FocusNode();
   final String? _uid = FirebaseAuth.instance.currentUser?.uid;
+  bool _sending = false;
 
   @override
   void dispose() {
     _controller.dispose();
+    _inputFocus.dispose();
     super.dispose();
   }
 
   Future<void> _send() async {
     final text = _controller.text.trim();
     final uid = _uid; // 로컬로 받아 null 승격 (구버전 Dart의 필드 승격 미지원 대비)
-    if (text.isEmpty || uid == null) return;
-    _controller.clear();
-    await _chatService.sendMessage(text, uid);
+    if (text.isEmpty || uid == null || _sending) return;
+
+    setState(() => _sending = true);
+    try {
+      await _chatService.sendMessage(text, uid);
+      _controller.clear(); // 전송 성공 후에만 비운다 — 실패 시 입력한 글이 사라지지 않도록
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('전송 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+      _inputFocus.requestFocus(); // 전송 후 커서를 입력창에 되돌려 연속 입력 가능
+    }
   }
 
   void _signOut() async {
@@ -62,6 +79,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
+                // 보안 규칙 거부·네트워크 오류를 무한 로딩으로 감추지 않는다
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text('메시지를 불러오지 못했습니다.\n${snapshot.error}',
+                          textAlign: TextAlign.center),
+                    ),
+                  );
+                }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -78,6 +105,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       sender: (data['sender'] ?? '').toString(),
                       text: (data['message'] ?? '').toString(),
                       isMine: data['sender'] == _uid,
+                      // serverTimestamp는 서버 반영 전 잠시 null — 그때는 시간을 숨긴다
+                      sentAt: (data['timestamp'] as Timestamp?)?.toDate(),
                     );
                   },
                 );
@@ -99,8 +128,10 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: TextField(
                 controller: _controller,
+                focusNode: _inputFocus,
+                autofocus: true, // 화면 진입 시 바로 입력 가능
                 textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _send(),
+                onSubmitted: (_) => _send(), // 엔터 전송 후 _send가 포커스를 되돌린다
                 decoration: const InputDecoration(
                   hintText: '메시지 입력...',
                   border: OutlineInputBorder(),
@@ -111,8 +142,14 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: _send,
+              icon: _sending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
+              onPressed: _sending ? null : _send, // 중복 전송 방지
             ),
           ],
         ),
@@ -125,13 +162,22 @@ class MessageBubble extends StatelessWidget {
   final String sender;
   final String text;
   final bool isMine;
+  final DateTime? sentAt;
 
   const MessageBubble({
     super.key,
     required this.sender,
     required this.text,
     required this.isMine,
+    this.sentAt,
   });
+
+  /// HH:MM (24시간). 서버 반영 전이면 빈 문자열.
+  String get _time {
+    final t = sentAt;
+    if (t == null) return '';
+    return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,8 +191,10 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment:
             isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          Text(
+            _time.isEmpty ? label : '$label · $_time',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
           Container(
             constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.7),
@@ -157,7 +205,7 @@ class MessageBubble extends StatelessWidget {
                   : Colors.grey.shade200,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(text),
+            child: SelectableText(text), // 메시지 복사 가능
           ),
         ],
       ),
