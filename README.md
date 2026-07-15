@@ -31,11 +31,11 @@ Not implemented: channels/topics, media/image sharing, push notifications, Googl
 
 - **Flutter / Dart** — Dart SDK `>=3.1.4 <4.0.0`, Material 3 theming.
 - **State management** — none beyond `StatefulWidget` + `StreamBuilder` (no external state library).
-- **Backend** — Firebase:
-  - `firebase_core` ^2.20.0
-  - `firebase_auth` ^4.12.0 (authentication)
-  - `cloud_firestore` ^4.12.0 (message storage + real-time stream)
-- **Lint** — `flutter_lints` ^2.0.0
+- **Backend** — Firebase (firebase_core는 3.x로 고정 — 4.x가 `pluginConstants`를 제거해 auth와 조합 시 웹 빌드가 깨짐):
+  - `firebase_core` `>=3.0.0 <4.0.0`
+  - `firebase_auth` `>=5.0.0 <6.0.0` (authentication)
+  - `cloud_firestore` `>=5.0.0 <6.0.0` (message storage + real-time stream)
+- **Lint** — `flutter_lints` ^6.0.0
 - Cross-platform scaffolding present for Android, iOS, web, macOS, Linux, and Windows.
 
 ## Structure
@@ -67,19 +67,40 @@ flutter run
 **Firebase setup required.** The app calls `Firebase.initializeApp()` and talks to a live Firestore/Auth backend, so you need your own Firebase project:
 
 1. Create a Firebase project; enable Email/Password authentication and Cloud Firestore.
-2. Run `flutterfire configure` to regenerate `lib/firebase_options.dart` for your project (note: `main.dart` currently calls `Firebase.initializeApp()` without passing `DefaultFirebaseOptions.currentPlatform` — pass it, or rely on the native platform config files).
-3. Add a Firestore security rule set appropriate for your use case before any real deployment.
+2. Run `flutterfire configure` to regenerate `lib/firebase_options.dart` for your project. `main.dart` passes `DefaultFirebaseOptions.currentPlatform` to `Firebase.initializeApp()`, so web·desktop도 이 파일이 있어야 초기화된다 (`firebase_options.dart`는 `.gitignore` 대상).
+3. **Firestore 보안 규칙을 반드시 잠글 것.** Firebase 클라이언트 apiKey는 빌드에 실려 공개되므로, 실제 방어선은 규칙이다. 이 프로젝트가 쓰는 최소 규칙:
+
+   ```javascript
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /chats/{doc} {
+         allow read: if request.auth != null;                                          // 로그인 사용자만 읽기
+         allow create: if request.auth != null && request.resource.data.sender == request.auth.uid; // 본인 uid로만 작성
+         allow update, delete: if false;                                               // 수정·삭제 금지
+       }
+       match /{document=**} { allow read, write: if false; }                           // 나머지 전면 차단
+     }
+   }
+   ```
 
 ## Roadmap
 
 - [x] 메시지 작성 UI + `ChatService.sendMessage`를 `ChatScreen`에 연결 (2026-07-13)
 - [x] `MessageBubble` 본인/상대 정렬·색 구분 (2026-07-13)
 - [x] Auth 실패 사용자 피드백(SnackBar) (2026-07-13)
+- [x] Firebase 의존성 상향(core 3.x 고정·auth/firestore 5.x) + `flutter_lints` 6, 웹/데스크톱 초기화 배선 (2026-07-15)
 - [ ] 원시 UID 대신 표시 이름(닉네임) 저장·표시
 - [ ] 입력 유효성(빈 값·이메일 형식) 강화 + 전송 중 로딩 표시
-- [ ] Firebase 의존성 상향(core 2→3 등) + `flutter_lints` 2→최신
 
 ## Changelog
+
+### 2026-07-15 — 웹 빌드 복구 + 입력 UX + 공개
+- **웹/데스크톱 초기화**: `main.dart`가 `DefaultFirebaseOptions.currentPlatform`을 넘겨 `initializeApp` — 인자 없이 호출하면 네이티브 설정이 있는 Android/iOS만 초기화되고 웹은 실패하던 문제 해결
+- **firebase_core 3.x 고정**: 4.x가 `FirebasePluginPlatform.pluginConstants`를 제거했는데 auth 6.5.5가 이를 참조해 웹(dart2js) 컴파일이 깨짐 → core를 3.x로 고정해 pub이 호환 조합(3.15.2/5.7.0/5.6.12)을 선택하게 함
+- **입력 UX**: 엔터 전송 후 `FocusNode`로 입력창에 포커스 복귀(연속 입력), 전송 중 중복 전송 차단, 전송 실패 시 SnackBar, 전송 성공 후에만 입력창 비움(실패 시 글 보존), 메시지 시각 표시·`SelectableText`
+- **실기 검증**: `flutter run -d edge`로 회원가입→메시지 전송→실시간 반영 성공(2026-07-14)
+- **공개 전환**: 저장소 public (히스토리엔 Firebase **클라이언트** 키만 — 비밀 아님, 실제 방어선은 Firestore 규칙). Setup에 잠금 규칙 문서화
 
 ### 2026-07-13 — 채팅 전송 UX 연결 + 정리
 - **메시지 전송 가능화**: `ChatScreen`에 입력창(엔터/버튼) 추가 → `ChatService.sendMessage` 호출(이전엔 전송 UI가 없어 메시지를 보낼 수 없었음)
