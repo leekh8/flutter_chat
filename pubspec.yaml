@@ -30,9 +30,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.20.0
-  firebase_auth: ^4.12.0
-  cloud_firestore: ^4.12.0
+  # firebase_core 4.x는 FirebasePluginPlatform에서 pluginConstants를 제거했는데
+  # firebase_auth 6.5.5가 아직 이를 참조해 웹(dart2js) 컴파일이 깨진다.
+  # → core를 3.x 라인으로 고정하고, auth/firestore는 pub이 호환 버전을 고르게 한다.
+  firebase_core: '>=3.0.0 <4.0.0'
+  firebase_auth: '>=5.0.0 <6.0.0'
+  cloud_firestore: '>=5.0.0 <6.0.0'
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -48,7 +51,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
