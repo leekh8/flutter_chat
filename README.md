@@ -78,6 +78,18 @@ flutter run
 
    `firestore.rules`가 강제하는 최소 규칙(참고): `chats` 컬렉션은 **로그인 사용자만 읽기**, **본인 uid(`sender == auth.uid`)로만 작성**, **수정·삭제 금지**, 그 외 경로는 **전면 차단(기본 deny)**. 문서 구조 `{ message, sender, timestamp }`와 `sender = 작성자 uid`는 `lib/services/chat_service.dart`·`chat_screen.dart`와 일치한다.
 
+## Deploy (Web → Firebase Hosting)
+
+Flutter web으로 빌드해 Firebase Hosting에 배포한다. `firebase.json`의 `hosting` 섹션이 `build/web`(Flutter web 산출물)을 public 루트로, SPA rewrite(`** → /index.html`)로 클라이언트 라우팅 fallback을 지정한다. `build/`는 `.gitignore` 대상 — 매 배포마다 재생성한다.
+
+```bash
+flutterfire configure          # 최초 1회: lib/firebase_options.dart 생성 (프로젝트 선택)
+flutter build web              # build/web/ 생성
+firebase deploy --only hosting # build/web → <project>.web.app 배포
+```
+
+배포 URL: `https://<project-id>.web.app` (별칭 `.firebaseapp.com`). Firestore 규칙과 함께 올리려면 `firebase deploy --only hosting,firestore:rules`.
+
 ## Roadmap
 
 - [x] 메시지 작성 UI + `ChatService.sendMessage`를 `ChatScreen`에 연결 (2026-07-13)
@@ -88,6 +100,9 @@ flutter run
 - [ ] 입력 유효성(빈 값·이메일 형식) 강화 + 전송 중 로딩 표시
 
 ## Changelog
+
+### 2026-07-16 — Firebase Hosting 설정
+- **`firebase.json`에 `hosting` 섹션 추가**: `public: build/web`(Flutter web 산출물), SPA rewrite(`** → /index.html`)로 클라이언트 라우팅 fallback, `ignore`에 `firebase.json`·dotfile·`node_modules` 제외. 기존 `firestore` 섹션은 보존. 배포 흐름(`flutter build web` → `firebase deploy --only hosting`)을 Deploy 섹션에 문서화. `firebase_options.dart`·`.firebaserc`는 여전히 소유자가 로컬 생성.
 
 ### 2026-07-16 — Firestore 규칙 파일화
 - **`firestore.rules` + `firebase.json` 추가**: README 텍스트로만 있던 보안 규칙을 배포 가능한 파일로 분리해 버전 관리 대상으로 전환. `firebase deploy --only firestore:rules`로 배포. 규칙 내용(로그인만 read·`sender==auth.uid`만 create·update/delete 금지·기본 deny)은 코드의 문서 구조 `{ message, sender, timestamp }`와 일치 확인. `.firebaserc`는 프로젝트 ID 소유자가 로컬 생성.
