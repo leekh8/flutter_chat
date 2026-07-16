@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// flutter_chat Firestore 보안 규칙
+// 클라이언트 apiKey는 빌드에 실려 공개되므로, 실제 방어선은 이 규칙이다.
+// 문서 구조(lib/services/chat_service.dart): chats/{doc} = { message, sender, timestamp }
+//   - sender = FirebaseAuth.currentUser.uid (chat_screen.dart _uid → sendMessage(text, uid))
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // chats 컬렉션: 로그인 사용자만 읽기, 본인 uid로만 작성, 수정·삭제 금지
+    match /chats/{doc} {
+      allow read: if request.auth != null;                                                   // 로그인 사용자만 읽기
+      allow create: if request.auth != null
+                    && request.resource.data.sender == request.auth.uid;                     // 본인 uid로만 작성
+      allow update, delete: if false;                                                        // 수정·삭제 금지
+    }
+
+    // 그 외 모든 경로 전면 차단 (기본 deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

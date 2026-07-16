@@ -68,21 +68,15 @@ flutter run
 
 1. Create a Firebase project; enable Email/Password authentication and Cloud Firestore.
 2. Run `flutterfire configure` to regenerate `lib/firebase_options.dart` for your project. `main.dart` passes `DefaultFirebaseOptions.currentPlatform` to `Firebase.initializeApp()`, so web·desktop도 이 파일이 있어야 초기화된다 (`firebase_options.dart`는 `.gitignore` 대상).
-3. **Firestore 보안 규칙을 반드시 잠글 것.** Firebase 클라이언트 apiKey는 빌드에 실려 공개되므로, 실제 방어선은 규칙이다. 이 프로젝트가 쓰는 최소 규칙:
+3. **Firestore 보안 규칙을 반드시 잠글 것.** Firebase 클라이언트 apiKey는 빌드에 실려 공개되므로, 실제 방어선은 규칙이다. 규칙은 이제 텍스트가 아니라 배포 가능한 [`firestore.rules`](firestore.rules) 파일로 버전 관리한다 — `firebase.json`이 이를 가리킨다. 배포:
 
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /chats/{doc} {
-         allow read: if request.auth != null;                                          // 로그인 사용자만 읽기
-         allow create: if request.auth != null && request.resource.data.sender == request.auth.uid; // 본인 uid로만 작성
-         allow update, delete: if false;                                               // 수정·삭제 금지
-       }
-       match /{document=**} { allow read, write: if false; }                           // 나머지 전면 차단
-     }
-   }
+   ```bash
+   firebase deploy --only firestore:rules
    ```
+
+   > 프로젝트 연결(`.firebaserc`)이 없으면 `firebase use --add`로 대상 프로젝트를 먼저 지정한다. `.firebaserc`는 프로젝트 ID를 담아 `.gitignore` 대상이다.
+
+   `firestore.rules`가 강제하는 최소 규칙(참고): `chats` 컬렉션은 **로그인 사용자만 읽기**, **본인 uid(`sender == auth.uid`)로만 작성**, **수정·삭제 금지**, 그 외 경로는 **전면 차단(기본 deny)**. 문서 구조 `{ message, sender, timestamp }`와 `sender = 작성자 uid`는 `lib/services/chat_service.dart`·`chat_screen.dart`와 일치한다.
 
 ## Roadmap
 
@@ -94,6 +88,9 @@ flutter run
 - [ ] 입력 유효성(빈 값·이메일 형식) 강화 + 전송 중 로딩 표시
 
 ## Changelog
+
+### 2026-07-16 — Firestore 규칙 파일화
+- **`firestore.rules` + `firebase.json` 추가**: README 텍스트로만 있던 보안 규칙을 배포 가능한 파일로 분리해 버전 관리 대상으로 전환. `firebase deploy --only firestore:rules`로 배포. 규칙 내용(로그인만 read·`sender==auth.uid`만 create·update/delete 금지·기본 deny)은 코드의 문서 구조 `{ message, sender, timestamp }`와 일치 확인. `.firebaserc`는 프로젝트 ID 소유자가 로컬 생성.
 
 ### 2026-07-15 — 웹 빌드 복구 + 입력 UX + 공개
 - **웹/데스크톱 초기화**: `main.dart`가 `DefaultFirebaseOptions.currentPlatform`을 넘겨 `initializeApp` — 인자 없이 호출하면 네이티브 설정이 있는 Android/iOS만 초기화되고 웹은 실패하던 문제 해결
