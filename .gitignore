@@ -158,3 +158,6 @@ lib/firebase_options.dart
 **/firebase_app_id_file.json
 # 모든 플랫폼(ios/macos)의 GoogleService-Info.plist 무시 — 위 154행 negation을 덮음(last-match-wins)
 **/GoogleService-Info.plist
+
+# Git Bash(msys) 가 죽을 때 남기는 덤프. 코드가 아니다.
+*.stackdump
